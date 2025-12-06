@@ -1,18 +1,43 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, colorchooser, Menu
+from tkinter import ttk, filedialog, colorchooser, Menu, messagebox
 import pandas as pd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
+import numpy as np
 
 class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Adatkezelő és Plotter")
-        self.root.geometry("800x600")
-        self.df = None
+        self.root.geometry("1024x768")
+
+        # --- Default Data Initialization (Allows editing without CSV load) ---
         
         self.setup_ui()
         self.setup_menu()
+        self._initialize_default_data()
+        self.refresh_table() 
+
+    def _initialize_default_data(self):
+        """Creates the initial DataFrame with default data."""
+        # data = {
+        #     'X': [1, 1.9, 2.6, 2.9, 3.6, 4.1, 5.0],
+        #     'Y1': [10.4, 7.8, 5.5, 4.6, 3.2, 2.95, 2.7],
+        #     'Y2': [8.8, 7.2, 5.0, 4.2, 3.0, 2.72, 2.68],
+        #     'Y3': [1, 10, 3, 2.2, 1.4, 1.2, 1.0],
+        #     'Y4': ['', '', '', '', '', '', '',]
+        # }
+        data = {
+            'X': ['','','','','','','','','','',],
+            'Y1': ['','','','','','','','','','',],
+            'Y2': ['','','','','','','','','','',],
+            'Y3': ['','','','','','','','','','',],
+            'Y4': ['','','','','','','','','','',],
+            'Y5': ['','','','','','','','','','',],
+            'Y6': ['','','','','','','','','','',]
+
+        }
+        self.df = pd.DataFrame(data)
 
     def setup_ui(self):
         self.tree_frame = ttk.Frame(self.root)
@@ -126,9 +151,44 @@ class App:
         fig = Figure(figsize=(5, 4), dpi=100)
         ax = fig.add_subplot(111)
 
-        for data in self.df.columns:
-            ax.plot(self.df[data], marker='o', picker=5, label=data)
+        #for data in self.df.columns:
+        #    ax.plot(self.df[data], marker='o', picker=5, label=data)
+        fig = Figure(figsize=(5, 4), dpi=100) # Use a standard DPI for Tkinter embedding
+        ax = fig.add_subplot(111)
+
+        # --- MODIFICATION START: Plotting ALL subsequent columns as a function of the first ---
+        column_names = self.df.columns
+        x_col = column_names[0] # The first column is the independent variable (X)
         
+        try:
+            # Prepare X data once
+            x_data = pd.to_numeric(self.df[x_col], errors='coerce').dropna()
+            
+            # Iterate over all columns starting from index 1 (the Y columns)
+            for i in range(1, len(column_names)):
+                y_col = column_names[i]
+                
+                # Prepare Y data
+                y_data = pd.to_numeric(self.df[y_col], errors='coerce').dropna()
+                
+                # Align data based on index intersection (only plot where both X and Y are valid)
+                common_index = x_data.index.intersection(y_data.index)
+                
+                # Plot the current Y column vs X
+                ax.plot(
+                    x_data[common_index],
+                    y_data[common_index],
+                    marker='o',
+                    picker=5,
+                    label=f"{y_col} vs {x_col}"
+                )
+        
+        except Exception as e:
+            messagebox.showerror("Plotting Hiba", f"Hiba történt az oszlopok konvertálása/ábrázolása közben: {e}")
+            plot_window.destroy()
+            return
+
+
         ax.legend()
         ax.set_title("Test Plot")
         ax.grid(True)

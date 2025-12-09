@@ -8,9 +8,20 @@ import numpy as np
 class App:
     def __init__(self, root):
         self.root = root
-        self.root.title("Data management and Plotter")
+        # Set the application title to the requested name
+        self.root.title("Data Visualizer App")
         self.root.geometry("800x600")
         
+        # Explicitly set the icon name for better cross-platform app name display
+        self.root.wm_iconname("Data Visualizer App") 
+        
+        # FIX: Add a specific call to override the application name in the system menu bar (e.g., on macOS)
+        try:
+            root.tk.call('::tk::mac::menu::about::set_text', 'Data Visualizer App')
+        except:
+            # This call only works on macOS/specific platforms; ignore if it fails elsewhere
+            pass
+
         # Initialize DataFrame with empty strings (default state)
         self.df = pd.DataFrame({
             'X': ['', '', '','', '', '', '', '', '', '', ''],
@@ -23,6 +34,17 @@ class App:
         self.setup_ui()
         self.setup_menu()
         self.refresh_table()
+
+        # FIX for focus issue: Use after_idle to ensure the window is fully mapped before forcing focus.
+        self.root.after_idle(self.set_initial_focus)
+
+
+    def set_initial_focus(self):
+        """Forces the window to the foreground after it has been fully drawn."""
+        self.root.lift()
+        self.root.attributes('-topmost', True)
+        self.root.attributes('-topmost', False)
+        self.root.focus_force() # Strongest focus command
 
     def setup_ui(self):
         self.tree_frame = ttk.Frame(self.root)
@@ -184,7 +206,7 @@ class App:
             target_row_index = min(num_rows - 1, current_row_index + 1)
         elif event.keysym == "Left":
             target_col_index = max(0, current_col_index - 1)
-        elif event.keysym == "Right" or event.keysym == "Tab": # NEW: Handle Tab key
+        elif event.keysym == "Right" or event.keysym == "Tab": # Handle Right/Tab key
             target_col_index = current_col_index + 1
             
             # Check for column wrapping: if we exceed the last column index
@@ -241,7 +263,7 @@ class App:
         entry.bind("<Key-Left>", lambda e: self._handle_cell_move(e, entry, col_index, row_id))
         entry.bind("<Key-Right>", lambda e: self._handle_cell_move(e, entry, col_index, row_id))
         
-        # NEW: Bind <Key-Tab> to the movement handler
+        # Bind <Key-Tab> to the movement handler
         entry.bind("<Key-Tab>", lambda e: self._handle_cell_move(e, entry, col_index, row_id))
         
         # Bind <Return> to the movement handler
